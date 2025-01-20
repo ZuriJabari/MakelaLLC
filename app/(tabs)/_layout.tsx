@@ -1,49 +1,60 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../../components/useColorScheme';
-import Colors from '../../constants/Colors';
+import { colors } from '../theme/colors';
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { router } from 'expo-router';
+import { supabase } from '../../lib/supabase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const [isDriver, setIsDriver] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    checkDriverStatus();
+    loadUnreadCount();
   }, []);
 
-  const checkDriverStatus = async () => {
+  const loadUnreadCount = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_driver')
-          .eq('id', user.id)
-          .single();
+        const { data: chats, error } = await supabase
+          .from('chats')
+          .select('unread_count')
+          .or(`user_id.eq.${user.id},other_user_id.eq.${user.id}`);
         
-        setIsDriver(profile?.is_driver ?? false);
+        if (error) throw error;
+        
+        const total = chats?.reduce((sum, chat) => sum + (chat.unread_count || 0), 0) || 0;
+        setUnreadCount(total);
       }
     } catch (error) {
-      console.error('Error checking driver status:', error);
+      console.error('Error loading unread count:', error);
     }
   };
 
   return (
     <Tabs
       screenOptions={{
-        headerStyle: {
-          backgroundColor: Colors[colorScheme].background,
-        },
-        headerTintColor: Colors[colorScheme].text,
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors[colorScheme].background,
-          borderTopColor: Colors[colorScheme].border,
+          backgroundColor: colors.background.primary,
+          borderTopColor: colors.neutral.stellarSilver,
+          elevation: 0,
+          shadowOpacity: 0,
+          height: Platform.select({ ios: 88, android: 60 }),
+          paddingBottom: Platform.select({ ios: insets.bottom, android: 8 }),
+          paddingTop: 8,
         },
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
+        tabBarActiveTintColor: colors.primary.electricIndigo,
+        tabBarInactiveTintColor: colors.text.disabled,
+        tabBarLabelStyle: {
+          fontFamily: 'Inter-Medium',
+          fontSize: 12,
+          paddingBottom: Platform.select({ ios: 0, android: 4 }),
+        },
       }}
     >
       <Tabs.Screen
@@ -51,17 +62,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="my-rides"
-        options={{
-          title: 'My Rides',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="car" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -71,9 +72,19 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
-          tabBarBadge: 3, // Example badge, should be dynamic based on unread messages
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }}
+      />
+
+      <Tabs.Screen
+        name="find-ride"
+        options={{
+          title: 'Find Rides',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="search-outline" size={size} color={color} />
+          ),
         }}
       />
 
@@ -82,16 +93,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-          headerRight: () => (
-            <Ionicons
-              name="settings-outline"
-              size={24}
-              color={Colors[colorScheme].text}
-              style={{ marginRight: 15 }}
-              onPress={() => router.push('/settings')}
-            />
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />

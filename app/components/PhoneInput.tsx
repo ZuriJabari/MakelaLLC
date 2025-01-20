@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, TextInput, Text, StyleSheet } from 'react-native';
 import { colors, typography } from '../theme';
 import { formatUgandaPhone, isValidUgandaPhone } from '../utils/validation';
+import { useColorScheme } from './useColorScheme';
+import Colors from '../constants/Colors';
 
 interface PhoneInputProps {
   onChangePhone: (phone: string, isValid: boolean) => void;
@@ -12,6 +14,7 @@ export function PhoneInput({ onChangePhone, error }: PhoneInputProps) {
   const [phone, setPhone] = useState('');
   const [isTouched, setIsTouched] = useState(false);
   const [localError, setLocalError] = useState('');
+  const colorScheme = useColorScheme();
 
   const handleChangePhone = (value: string) => {
     const formattedPhone = formatUgandaPhone(value);
@@ -40,18 +43,26 @@ export function PhoneInput({ onChangePhone, error }: PhoneInputProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Phone Number</Text>
-      <TextInput
-        style={[
-          styles.input,
-          (localError || error) && isTouched && styles.inputError
-        ]}
-        value={phone}
-        onChangeText={handleChangePhone}
-        placeholder="+256 700 000000"
-        keyboardType="phone-pad"
-        onBlur={() => setIsTouched(true)}
-        placeholderTextColor={colors.text.disabled}
-      />
+      <View style={[
+        styles.inputContainer,
+        { borderColor: error ? Colors.status.error : Colors[colorScheme].border }
+      ]}>
+        <Text style={[styles.prefix, { color: Colors[colorScheme].text }]}>+256</Text>
+        <TextInput
+          style={[
+            styles.input,
+            { color: Colors[colorScheme].text },
+            (localError || error) && isTouched && styles.inputError
+          ]}
+          value={phone}
+          onChangeText={handleChangePhone}
+          placeholder="700 000000"
+          keyboardType="phone-pad"
+          onBlur={() => setIsTouched(true)}
+          placeholderTextColor={`rgba(${Colors[colorScheme].text.replace(/[^\d,]/g, '')}, 0.5)`}
+          maxLength={9}
+        />
+      </View>
       {((localError || error) && isTouched) && (
         <Text style={styles.errorText}>{localError || error}</Text>
       )}
@@ -71,16 +82,22 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: 8,
   },
-  input: {
-    height: 48,
-    borderRadius: 12,
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.neutral.stellarSilver,
-    paddingHorizontal: 16,
-    fontSize: typography.sizes.body1,
-    fontFamily: typography.fonts.primary,
-    color: colors.text.primary,
-    backgroundColor: colors.background.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  prefix: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
   },
   inputError: {
     borderColor: colors.status.error,
@@ -91,4 +108,6 @@ const styles = StyleSheet.create({
     color: colors.status.error,
     marginTop: 4,
   },
-}); 
+});
+
+export default PhoneInput; 

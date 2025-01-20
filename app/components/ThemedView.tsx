@@ -3,7 +3,11 @@ import { View, ViewProps } from 'react-native';
 import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 
-export function ThemedView(props: ViewProps) {
+export interface ThemedViewProps extends ViewProps {
+  style?: ViewProps['style'];
+}
+
+const ThemedView = (props: ThemedViewProps) => {
   const colorScheme = useColorScheme();
   const { style, ...otherProps } = props;
 
@@ -17,3 +21,5 @@ export function ThemedView(props: ViewProps) {
     />
   );
 }
+
+export default ThemedView; 

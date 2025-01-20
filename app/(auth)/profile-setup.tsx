@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, TextInput, ScrollView, Image, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '../../components/useColorScheme';
-import Colors from '../../constants/Colors';
-import { supabase } from '../../lib/supabase';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 
 type ColorScheme = 'light' | 'dark';
 
@@ -33,11 +34,82 @@ export default function ProfileSetupScreen() {
     color: '',
     licensePlate: '',
   });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      checkAuth();
+    }
+  }, [mounted]);
+
+  const checkAuth = async () => {
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        if (mounted) {
+          router.replace('/(auth)/verify');
+        }
+        return;
+      }
+
+      if (!session?.user) {
+        console.log('No session found, redirecting to verify');
+        if (mounted) {
+          router.replace('/(auth)/verify');
+        }
+        return;
+      }
+
+      // Verify the auth user exists
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('Auth user error or not found:', authError);
+        // Force sign out and redirect to verify
+        await supabase.auth.signOut();
+        if (mounted) {
+          router.replace('/(auth)/verify');
+        }
+        return;
+      }
+
+      // Check if profile already exists
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Profile error:', profileError);
+        return;
+      }
+
+      if (profile?.full_name) {
+        console.log('Profile already exists, redirecting to tabs');
+        if (mounted) {
+          router.replace('/(tabs)');
+        }
+      }
+    } catch (err) {
+      console.error('Error in checkAuth:', err);
+      // Force sign out on any error
+      await supabase.auth.signOut();
+      if (mounted) {
+        router.replace('/(auth)/verify');
+      }
+    }
+  };
 
   const pickImage = async (type: 'profile' | 'id') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -58,18 +130,60 @@ export default function ProfileSetupScreen() {
 
   const uploadImage = async (uri: string, path: string) => {
     try {
+      console.log('Starting image upload:', { uri, path });
+      
+      // First convert image to base64
       const response = await fetch(uri);
-      const blob = await response.blob();
-      const { error: uploadError } = await supabase.storage
+      if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+      
+      const base64 = await response.blob().then(blob => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              // Remove data:image/jpeg;base64, prefix
+              const base64Data = reader.result.split(',')[1];
+              resolve(base64Data);
+            } else {
+              reject(new Error('Failed to convert image to base64'));
+            }
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+      });
+
+      console.log('Image converted to base64');
+
+      // Upload base64 data
+      const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, blob);
+        .upload(path, decode(base64), {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
-      return path;
+      console.log('Upload successful:', data);
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(path);
+
+      console.log('Generated public URL:', publicUrl);
+      return publicUrl;
     } catch (err) {
-      console.error('Error uploading image:', err);
-      throw new Error('Failed to upload image');
+      console.error('Detailed upload error:', err);
+      if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+      }
+      throw new Error('Failed to upload image. Please try again.');
     }
   };
 
@@ -77,11 +191,13 @@ export default function ProfileSetupScreen() {
     try {
       setError(null);
       setLoading(true);
+      console.log('Starting profile update...');
 
       if (!fullName.trim()) {
         throw new Error('Please enter your full name');
       }
 
+      // Validate driver details if isDriver is true
       if (isDriver) {
         if (!profilePhotoUri || !idPhotoUri) {
           throw new Error('Please upload both profile photo and ID photo');
@@ -94,13 +210,73 @@ export default function ProfileSetupScreen() {
         }
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      // First verify the auth user exists
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('Auth user error or not found:', authError);
+        await supabase.auth.signOut();
+        router.replace('/(auth)/verify');
+        return;
+      }
 
+      console.log('Auth user verified:', user.id);
+
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('Session error:', sessionError);
+        await supabase.auth.signOut();
+        router.replace('/(auth)/verify');
+        return;
+      }
+
+      console.log('Session details:', {
+        userId: session.user.id,
+        phone: session.user.phone,
+        email: session.user.email,
+      });
+
+      // Check if profile exists
+      console.log('Checking if profile exists...');
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error checking profile:', profileError);
+        throw profileError;
+      }
+
+      // If profile doesn't exist, create it first
+      if (!existingProfile) {
+        console.log('Profile does not exist, creating base profile...');
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            phone: user.phone,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          console.error('Profile creation error:', insertError);
+          throw insertError;
+        }
+        console.log('Base profile created successfully');
+
+        // Wait a moment to ensure the insert is complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Handle image uploads if needed
       let profilePhotoPath = null;
       let idPhotoPath = null;
 
       if (profilePhotoUri) {
+        console.log('Uploading profile photo...');
         profilePhotoPath = await uploadImage(
           profilePhotoUri,
           `${user.id}/profile.jpg`
@@ -108,29 +284,45 @@ export default function ProfileSetupScreen() {
       }
 
       if (idPhotoUri && isDriver) {
+        console.log('Uploading ID photo...');
         idPhotoPath = await uploadImage(
           idPhotoUri,
           `${user.id}/id.jpg`
         );
       }
 
+      console.log('Photos uploaded:', { profilePhotoPath, idPhotoPath });
+
+      // Prepare profile update data
+      const profileData = {
+        full_name: fullName,
+        avatar_url: profilePhotoPath,
+        is_driver: isDriver,
+        vehicle_details: isDriver ? vehicleDetails : null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update the profile
+      console.log('Updating profile with data:', profileData);
       const { error: updateError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: fullName,
-          avatar_url: profilePhotoPath,
-          is_driver: isDriver,
-          id_url: idPhotoPath,
-          vehicle_details: isDriver ? vehicleDetails : null,
-          updated_at: new Date().toISOString(),
-        });
+        .update(profileData)
+        .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+        throw updateError;
+      }
 
+      console.log('Profile updated successfully');
       router.replace('/(tabs)');
     } catch (err) {
+      console.error('Profile setup error:', err);
       setError(err instanceof Error ? err.message : 'Failed to update profile');
+      // If there's a specific error code, add it to the error message
+      if (err && typeof err === 'object' && 'code' in err) {
+        setError(prev => `${prev} (Error code: ${err.code})`);
+      }
     } finally {
       setLoading(false);
     }

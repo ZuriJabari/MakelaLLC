@@ -52,13 +52,22 @@ export default function VerifyScreen() {
         throw new Error('Please enter a valid Uganda phone number');
       }
 
+      // For development, check if using test phone number
+      if (formattedPhone === '256782374230') {
+        console.log('Using test phone number');
+      }
+
       const { error: signInError } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
       });
 
       if (signInError) throw signInError;
 
-      router.push('/otp');
+      // Navigate to OTP screen with phone number
+      router.push({
+        pathname: '/(auth)/otp',
+        params: { phone: formattedPhone }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

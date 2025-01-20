@@ -9,10 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 type ColorScheme = 'light' | 'dark';
 
 export default function OTPScreen() {
-  const colorScheme = useColorScheme() as ColorScheme;
   const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  
+  const colorScheme = useColorScheme() as ColorScheme;
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,14 +39,13 @@ export default function OTPScreen() {
     newOtp[index] = text;
     setOtp(newOtp);
 
-    // Move to next input if value is entered
+    // Auto-advance to next input
     if (text && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyPress = (e: any, index: number) => {
-    // Move to previous input on backspace if current input is empty
     if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -63,18 +61,28 @@ export default function OTPScreen() {
         throw new Error('Please enter the complete verification code');
       }
 
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: '', // This will be filled by Supabase from the session
+      // For development, check if using test credentials
+      if (phone === '256782374230' && otpValue !== '123456') {
+        throw new Error('Invalid verification code');
+      }
+
+      const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
+        phone,
         token: otpValue,
         type: 'sms',
       });
 
       if (verifyError) throw verifyError;
 
+      if (!session?.user) {
+        throw new Error('Verification failed');
+      }
+
       // Check if profile exists
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
+        .eq('id', session.user.id)
         .single();
 
       // Redirect based on profile completion
@@ -95,8 +103,13 @@ export default function OTPScreen() {
       setError(null);
       setResendLoading(true);
 
+      if (!phone) {
+        throw new Error('No phone number found');
+      }
+
       const { error: resendError } = await supabase.auth.resend({
         type: 'sms',
+        phone: phone,
       });
 
       if (resendError) throw resendError;
@@ -113,34 +126,42 @@ export default function OTPScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors[colorScheme].background }]}>
       <View style={styles.header}>
-        <Ionicons name="shield-checkmark" size={64} color={Colors[colorScheme].text} />
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={Colors[colorScheme].text} />
+        </Pressable>
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="shield-checkmark" size={64} color={Colors[colorScheme].text} />
+        </View>
+
         <Text style={[styles.title, { color: Colors[colorScheme].text }]}>
           Verify your number
         </Text>
         <Text style={[styles.subtitle, { color: Colors[colorScheme].text }]}>
           Enter the 6-digit code we sent you
         </Text>
-      </View>
 
-      <View style={styles.form}>
         <View style={styles.otpContainer}>
           {otp.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => inputRefs.current[index] = ref}
+              ref={(ref) => (inputRefs.current[index] = ref)}
               style={[
                 styles.otpInput,
                 { 
                   color: Colors[colorScheme].text,
                   borderColor: Colors[colorScheme].border,
-                  backgroundColor: Colors[colorScheme].background,
-                },
+                  backgroundColor: Colors[colorScheme].background
+                }
               ]}
               value={digit}
-              onChangeText={(text) => handleOtpChange(text, index)}
+              onChangeText={(text) => handleOtpChange(text.replace(/[^0-9]/g, ''), index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="number-pad"
               maxLength={1}
+              selectTextOnFocus
               editable={!loading}
             />
           ))}
@@ -153,7 +174,7 @@ export default function OTPScreen() {
         <Pressable
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleVerify}
-          disabled={loading}
+          disabled={loading || otp.some(digit => !digit)}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -162,27 +183,18 @@ export default function OTPScreen() {
           )}
         </Pressable>
 
-        <View style={styles.resendContainer}>
-          {canResend ? (
-            <Pressable
-              onPress={handleResendOTP}
-              disabled={resendLoading}
-              style={styles.resendButton}
-            >
-              {resendLoading ? (
-                <ActivityIndicator size="small" color={Colors[colorScheme].text} />
-              ) : (
-                <Text style={[styles.resendText, { color: Colors[colorScheme].text }]}>
-                  Resend Code
-                </Text>
-              )}
-            </Pressable>
-          ) : (
-            <Text style={[styles.countdownText, { color: Colors[colorScheme].text }]}>
-              Resend code in {countdown}s
-            </Text>
-          )}
-        </View>
+        <Pressable
+          onPress={handleResendOTP}
+          disabled={!canResend || resendLoading}
+          style={styles.resendButton}
+        >
+          <Text style={[
+            styles.resendText,
+            (!canResend || resendLoading) && styles.resendTextDisabled
+          ]}>
+            {resendLoading ? 'Sending...' : canResend ? 'Resend Code' : `Resend in ${countdown}s`}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -191,74 +203,83 @@ export default function OTPScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'space-between',
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 60,
+    padding: 16,
+  },
+  backButton: {
+    padding: 8,
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  iconContainer: {
+    marginBottom: 24,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
+    marginBottom: 32,
     textAlign: 'center',
-    opacity: 0.7,
-  },
-  form: {
-    width: '100%',
-    gap: 20,
+    opacity: 0.8,
   },
   otpContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 30,
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 32,
   },
   otpInput: {
     width: 45,
     height: 45,
     borderWidth: 1,
     borderRadius: 8,
-    fontSize: 24,
     textAlign: 'center',
-  },
-  errorText: {
-    color: '#FF4444',
-    fontSize: 14,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '600',
   },
   button: {
-    height: 50,
     backgroundColor: '#32CD32',
+    width: '100%',
+    height: 48,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 16,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  resendContainer: {
-    alignItems: 'center',
+  errorText: {
+    color: '#ff4444',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   resendButton: {
-    padding: 10,
+    padding: 8,
   },
   resendText: {
-    fontSize: 16,
+    color: '#32CD32',
+    fontSize: 14,
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
-  countdownText: {
-    fontSize: 16,
-    opacity: 0.7,
+  resendTextDisabled: {
+    opacity: 0.5,
+    textDecorationLine: 'none',
   },
 }); 

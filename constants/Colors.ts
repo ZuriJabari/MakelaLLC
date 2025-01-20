@@ -19,8 +19,33 @@ export default {
     text: '#fff',
     background: '#000',
     tint: tintColorDark,
-    tabIconDefault: '#666',
+    tabIconDefault: '#ccc',
     tabIconSelected: tintColorDark,
     border: '#333',
+  },
+  primary: {
+    deepPurple: '#4A148C',
+    electricIndigo: '#6200EA',
+  },
+  accent: {
+    mintGreen: '#00E676',
+  },
+  text: {
+    primary: '#000000',
+    secondary: '#757575',
+    inverse: '#FFFFFF',
+  },
+  background: {
+    primary: '#FFFFFF',
+    secondary: '#F5F5F5',
+    dark: '#121212',
+  },
+  neutral: {
+    stellarSilver: '#E0E0E0',
+  },
+  status: {
+    error: '#D32F2F',
+    success: '#388E3C',
+    warning: '#F57C00',
   },
 } as const;

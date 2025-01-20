@@ -7,7 +7,7 @@ export const gradients = {
     end: { x: 1, y: 1 },
   },
   accent: {
-    colors: [colors.accent.mintGreen, colors.primary.electricIndigo],
+    colors: [colors.accent.mintGreen, colors.accent.coral],
     start: { x: 0, y: 0 },
     end: { x: 1, y: 1 },
   },

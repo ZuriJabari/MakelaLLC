@@ -1,20 +1,18 @@
 import React from 'react';
 import { View, Image, StyleSheet } from 'react-native';
-import ThemedText from './ThemedText';
-import { useColorScheme } from './useColorScheme';
+import { ThemedText } from './ThemedText';
 import Colors from '../constants/Colors';
 
 interface AvatarProps {
   size: number;
-  imageUrl?: string | null;
+  imageUrl: string | null;
   name: string;
 }
 
 export default function Avatar({ size, imageUrl, name }: AvatarProps) {
-  const colorScheme = useColorScheme();
   const initials = name
     .split(' ')
-    .map(part => part[0])
+    .map(n => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -24,7 +22,7 @@ export default function Avatar({ size, imageUrl, name }: AvatarProps) {
       width: size,
       height: size,
       borderRadius: size / 2,
-      backgroundColor: imageUrl ? 'transparent' : Colors[colorScheme].tint,
+      backgroundColor: Colors.light.tint,
       justifyContent: 'center',
       alignItems: 'center',
       overflow: 'hidden',
@@ -36,7 +34,7 @@ export default function Avatar({ size, imageUrl, name }: AvatarProps) {
     initials: {
       color: '#fff',
       fontSize: size * 0.4,
-      fontWeight: 'bold',
+      fontWeight: '600',
     },
   });
 
@@ -46,6 +44,7 @@ export default function Avatar({ size, imageUrl, name }: AvatarProps) {
         <Image
           source={{ uri: imageUrl }}
           style={styles.image}
+          resizeMode="cover"
         />
       </View>
     );

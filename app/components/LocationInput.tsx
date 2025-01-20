@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
 import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { supabase } from '../lib/supabase';
 import MapView, { Marker } from 'react-native-maps';
-
-export type LocationPoint = {
-  latitude: number;
-  longitude: number;
-  address: string;
-};
+import { LocationPoint } from '../types';
 
 type RecentLocation = {
   id: string;
@@ -22,7 +17,7 @@ type RecentLocation = {
   created_at: string;
 };
 
-type LocationInputProps = {
+export type LocationInputProps = {
   /** Placeholder text for the input */
   placeholder: string;
   /** Current selected location */
@@ -30,12 +25,13 @@ type LocationInputProps = {
   /** Callback when location is selected */
   onLocationSelect: (location: LocationPoint) => void;
   /** Optional initial region for the map */
-  initialRegion?: {
+  initialRegion: {
     latitude: number;
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
   };
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -51,12 +47,8 @@ export default function LocationInput({
   placeholder, 
   value, 
   onLocationSelect,
-  initialRegion = {
-    latitude: 0.3476,  // Kampala coordinates
-    longitude: 32.5825,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  }
+  initialRegion,
+  containerStyle,
 }: LocationInputProps) {
   const colorScheme = useColorScheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -192,7 +184,7 @@ export default function LocationInput({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <View style={styles.inputContainer}>
         <TextInput
           style={[

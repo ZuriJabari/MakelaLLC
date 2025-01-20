@@ -4,26 +4,26 @@ import { typography } from '../typography';
 
 export const buttonStyles = StyleSheet.create({
   base: {
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
     paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
   },
   
   primary: {
-    backgroundColor: colors.primary.deepPurple,
+    backgroundColor: colors.primary.electricIndigo,
   },
   
   secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.primary.deepPurple,
+    backgroundColor: colors.background.secondary,
   },
   
   text: {
-    fontFamily: typography.fonts.primary,
     fontSize: typography.sizes.body1,
+    fontFamily: typography.fonts.primary,
     fontWeight: '600',
   },
 }); 

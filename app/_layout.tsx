@@ -1,127 +1,126 @@
-import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { useColorScheme } from '../components/useColorScheme';
+import { Stack } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Colors from '../constants/Colors';
 import { supabase } from '../lib/supabase';
-import { AuthChangeEvent, Session } from '@supabase/supabase-js';
-
-type ColorScheme = 'light' | 'dark';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme() as ColorScheme;
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isProfileComplete, setIsProfileComplete] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const colorScheme = useColorScheme();
+  const router = useRouter();
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    checkAuthState();
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      if (event === 'SIGNED_IN') {
-        setIsAuthenticated(true);
-        await checkProfileSetup();
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setIsProfileComplete(false);
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      
+      if (event === 'SIGNED_OUT') {
+        router.replace('/(auth)/verify');
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.full_name) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/(auth)/profile-setup');
+        }
       }
     });
 
     return () => {
-      authListener?.subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  const checkAuthState = async () => {
+  async function checkSession() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-      if (session) {
-        await checkProfileSetup();
+      
+      if (session?.user) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile?.full_name) {
+            router.replace('/(tabs)');
+          } else {
+            router.replace('/(auth)/profile-setup');
+          }
+        } catch (profileError) {
+          console.error('Error fetching profile:', profileError);
+          router.replace('/(auth)/verify');
+        }
+      } else {
+        router.replace('/(auth)/verify');
       }
     } catch (error) {
-      console.error('Error checking auth state:', error);
+      console.error('Error checking session:', error);
+      router.replace('/(auth)/verify');
     } finally {
-      setLoading(false);
+      setInitializing(false);
     }
-  };
+  }
 
-  const checkProfileSetup = async () => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .single();
-
-      if (error) throw error;
-      setIsProfileComplete(!!profile?.full_name);
-    } catch (error) {
-      console.error('Error checking profile:', error);
-      setIsProfileComplete(false);
-    }
-  };
-
-  if (loading) {
-    return null; // Or a loading screen component
+  if (initializing) {
+    return null;
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: Colors[colorScheme].background,
-        },
-        headerTintColor: Colors[colorScheme].text,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      }}
-    >
-      {!isAuthenticated ? (
-        <>
-          <Stack.Screen
-            name="(auth)/verify"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="(auth)/otp"
-            options={{
-              title: 'Verify OTP',
-              presentation: 'modal',
-            }}
-          />
-        </>
-      ) : !isProfileComplete ? (
-        <Stack.Screen
-          name="(auth)/profile-setup"
-          options={{
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack 
+          screenOptions={{
             headerShown: false,
+            contentStyle: { backgroundColor: Colors[colorScheme ?? 'light'].background }
           }}
-        />
-      ) : (
-        <>
-          <Stack.Screen
-            name="(tabs)"
+        >
+          <Stack.Screen name="(auth)/verify" />
+          <Stack.Screen 
+            name="(auth)/otp" 
             options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="chat/[userId]"
-            options={{
-              title: 'Chat',
               presentation: 'modal',
+              headerShown: true,
+              title: 'Verify OTP'
             }}
           />
-          <Stack.Screen
-            name="booking/[rideId]"
+          <Stack.Screen name="(auth)/profile-setup" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen 
+            name="profile" 
             options={{
-              title: 'Booking Confirmation',
-              presentation: 'modal',
+              headerShown: true,
+              title: 'Profile'
             }}
           />
-        </>
-      )}
-    </Stack>
+          <Stack.Screen 
+            name="booking/[id]" 
+            options={{
+              headerShown: true,
+              title: 'Booking Details'
+            }}
+          />
+          <Stack.Screen 
+            name="chat/[userId]" 
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              title: 'Chat'
+            }}
+          />
+        </Stack>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
