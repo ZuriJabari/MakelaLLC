@@ -1,11 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from '../../components/useColorScheme';
+import { useColorScheme, Platform } from 'react-native';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -42,6 +42,7 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.background.primary,
           borderTopColor: colors.neutral.stellarSilver,
+          borderTopWidth: 1,
           elevation: 0,
           shadowOpacity: 0,
           height: Platform.select({ ios: 88, android: 60 }),
@@ -51,9 +52,13 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary.electricIndigo,
         tabBarInactiveTintColor: colors.text.disabled,
         tabBarLabelStyle: {
-          fontFamily: 'Inter-Medium',
-          fontSize: 12,
+          fontFamily: typography.fonts.primary,
+          fontSize: typography.sizes.caption,
+          fontWeight: '500',
           paddingBottom: Platform.select({ ios: 0, android: 4 }),
+        },
+        tabBarIconStyle: {
+          marginBottom: Platform.select({ ios: -4, android: 0 }),
         },
       }}
     >
@@ -75,6 +80,10 @@ export default function TabLayout() {
             <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.status.error,
+            color: colors.text.inverse,
+          },
         }}
       />
 

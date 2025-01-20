@@ -66,7 +66,7 @@ export default function OTPScreen() {
         throw new Error('Invalid verification code');
       }
 
-      const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
+      const { error: verifyError } = await supabase.auth.verifyOtp({
         phone,
         token: otpValue,
         type: 'sms',
@@ -74,24 +74,9 @@ export default function OTPScreen() {
 
       if (verifyError) throw verifyError;
 
-      if (!session?.user) {
-        throw new Error('Verification failed');
-      }
-
-      // Check if profile exists
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', session.user.id)
-        .single();
-
-      // Redirect based on profile completion
-      if (profile?.full_name) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/profile-setup');
-      }
+      // The root layout will handle navigation based on auth state
     } catch (err) {
+      console.error('Verification error:', err);
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
       setLoading(false);

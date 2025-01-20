@@ -62,7 +62,7 @@ create table public.chats (
 -- Create messages table
 create table public.messages (
   id uuid default gen_random_uuid() primary key,
-  chat_id text not null,
+  chat_id uuid not null references public.chats(id) on delete cascade,
   sender_id uuid references public.profiles(id) on delete cascade not null,
   receiver_id uuid references public.profiles(id) on delete cascade not null,
   type text not null,

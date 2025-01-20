@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Image, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, Image, RefreshControl, ActivityIndicator, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { useColorScheme } from '../../components/useColorScheme';
 import Colors from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
 import { router } from 'expo-router';
 import { format } from 'date-fns';
+import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ColorScheme = 'light' | 'dark';
 
@@ -32,7 +36,7 @@ interface SupabaseChatResponse {
     full_name: string;
     avatar_url: string | null;
   };
-  last_message: Array<{
+  messages: Array<{
     content: string;
     type: 'text' | 'image' | 'location';
     created_at: string;
@@ -42,6 +46,7 @@ interface SupabaseChatResponse {
 
 export default function MessagesScreen() {
   const colorScheme = useColorScheme() as ColorScheme;
+  const insets = useSafeAreaInsets();
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,7 +66,7 @@ export default function MessagesScreen() {
             full_name,
             avatar_url
           ),
-          last_message:messages(
+          messages!chat_id_fkey(
             content,
             type,
             created_at
@@ -84,9 +89,9 @@ export default function MessagesScreen() {
           avatar_url: chat.other_user.avatar_url || null,
         },
         last_message: {
-          content: chat.last_message?.[0]?.content || '',
-          type: chat.last_message?.[0]?.type || 'text',
-          created_at: chat.last_message?.[0]?.created_at || new Date().toISOString(),
+          content: chat.messages?.[0]?.content || '',
+          type: chat.messages?.[0]?.type || 'text',
+          created_at: chat.messages?.[0]?.created_at || new Date().toISOString(),
         },
         unread_count: chat.unread_count || 0,
       }));
@@ -142,10 +147,7 @@ export default function MessagesScreen() {
 
   const renderItem = ({ item }: { item: ChatPreview }) => (
     <Pressable
-      style={[
-        styles.chatItem,
-        { borderBottomColor: Colors[colorScheme].border }
-      ]}
+      style={styles.chatItem}
       onPress={() => router.push(`/chat/${item.other_user.id}?ride=${item.ride_id}`)}
     >
       <View style={styles.avatar}>
@@ -155,47 +157,33 @@ export default function MessagesScreen() {
             style={styles.avatarImage}
           />
         ) : (
-          <View style={[styles.avatarFallback, { backgroundColor: Colors[colorScheme].tint }]}>
+          <LinearGradient
+            colors={[colors.primary.deepPurple, colors.primary.electricIndigo]}
+            style={styles.avatarFallback}
+          >
             <Text style={styles.avatarText}>
               {item.other_user.full_name.charAt(0)}
             </Text>
-          </View>
+          </LinearGradient>
         )}
       </View>
 
       <View style={styles.chatInfo}>
         <View style={styles.chatHeader}>
-          <Text 
-            style={[
-              styles.name,
-              { color: Colors[colorScheme].text }
-            ]}
-            numberOfLines={1}
-          >
+          <Text style={styles.name} numberOfLines={1}>
             {item.other_user.full_name}
           </Text>
-          <Text 
-            style={[
-              styles.time,
-              { color: Colors[colorScheme].tabIconDefault }
-            ]}
-          >
+          <Text style={styles.time}>
             {format(new Date(item.last_message.created_at), 'HH:mm')}
           </Text>
         </View>
 
         <View style={styles.chatPreview}>
-          <Text 
-            style={[
-              styles.previewText,
-              { color: Colors[colorScheme].tabIconDefault }
-            ]}
-            numberOfLines={1}
-          >
+          <Text style={styles.previewText} numberOfLines={1}>
             {renderPreviewText(item.last_message)}
           </Text>
           {item.unread_count > 0 && (
-            <View style={[styles.badge, { backgroundColor: Colors[colorScheme].tint }]}>
+            <View style={styles.badge}>
               <Text style={styles.badgeText}>
                 {item.unread_count}
               </Text>
@@ -208,18 +196,16 @@ export default function MessagesScreen() {
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.container, { backgroundColor: Colors[colorScheme].background }]}>
-        <Text style={[styles.emptyText, { color: Colors[colorScheme].text }]}>
-          Loading chats...
-        </Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary.electricIndigo} />
       </View>
     );
   }
 
   if (chats.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: Colors[colorScheme].background }]}>
-        <Text style={[styles.emptyText, { color: Colors[colorScheme].text }]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Text style={styles.emptyText}>
           No messages yet
         </Text>
       </View>
@@ -228,7 +214,8 @@ export default function MessagesScreen() {
 
   return (
     <FlatList
-      style={[styles.container, { backgroundColor: Colors[colorScheme].background }]}
+      style={[styles.container, { paddingTop: insets.top }]}
+      contentContainerStyle={styles.listContent}
       data={chats}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
@@ -236,9 +223,11 @@ export default function MessagesScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          tintColor={Colors[colorScheme].text}
+          tintColor={colors.primary.electricIndigo}
+          colors={[colors.primary.electricIndigo]}
         />
       }
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
     />
   );
 }
@@ -246,78 +235,93 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
+    backgroundColor: colors.background.primary,
+  } as ViewStyle,
+  listContent: {
+    paddingHorizontal: 16,
+  } as ViewStyle,
   chatItem: {
     flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarFallback: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
     alignItems: 'center',
-  },
+    paddingVertical: 16,
+  } as ViewStyle,
+  avatar: {
+    marginRight: 16,
+  } as ViewStyle,
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  } as ImageStyle,
+  avatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
   avatarText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+    color: colors.text.inverse,
+    fontSize: typography.sizes.h3,
+    fontFamily: typography.fonts.primary,
+    fontWeight: '600',
+  } as TextStyle,
   chatInfo: {
     flex: 1,
-  },
+  } as ViewStyle,
   chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
-  },
+  } as ViewStyle,
   name: {
-    fontSize: 16,
-    fontWeight: '600',
     flex: 1,
+    fontSize: typography.sizes.body1,
+    fontFamily: typography.fonts.primary,
+    fontWeight: '600',
+    color: colors.text.primary,
     marginRight: 8,
-  },
+  } as TextStyle,
   time: {
-    fontSize: 12,
-  },
+    fontSize: typography.sizes.caption,
+    fontFamily: typography.fonts.primary,
+    color: colors.text.secondary,
+  } as TextStyle,
   chatPreview: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  } as ViewStyle,
   previewText: {
-    fontSize: 14,
     flex: 1,
+    fontSize: typography.sizes.body2,
+    fontFamily: typography.fonts.primary,
+    color: colors.text.secondary,
     marginRight: 8,
-  },
+  } as TextStyle,
   badge: {
+    backgroundColor: colors.status.error,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 6,
-  },
+  } as ViewStyle,
   badgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+    color: colors.text.inverse,
+    fontSize: typography.sizes.caption,
+    fontFamily: typography.fonts.primary,
+    fontWeight: '600',
+  } as TextStyle,
+  separator: {
+    height: 1,
+    backgroundColor: colors.neutral.stellarSilver,
+  } as ViewStyle,
   emptyText: {
     textAlign: 'center',
-    marginTop: 40,
-    fontSize: 16,
-  },
+    fontSize: typography.sizes.body1,
+    fontFamily: typography.fonts.primary,
+    color: colors.text.secondary,
+  } as TextStyle,
 }); 
