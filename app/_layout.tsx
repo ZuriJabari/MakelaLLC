@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, Slot } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { useColorScheme } from 'react-native';
@@ -53,27 +53,30 @@ export default function RootLayout() {
             .single();
 
           if (profile?.full_name) {
+            setInitializing(false);
             router.replace('/(tabs)');
           } else {
+            setInitializing(false);
             router.replace('/(auth)/profile-setup');
           }
         } catch (profileError) {
           console.error('Error fetching profile:', profileError);
+          setInitializing(false);
           router.replace('/(auth)/verify');
         }
       } else {
+        setInitializing(false);
         router.replace('/(auth)/verify');
       }
     } catch (error) {
       console.error('Error checking session:', error);
-      router.replace('/(auth)/verify');
-    } finally {
       setInitializing(false);
+      router.replace('/(auth)/verify');
     }
   }
 
   if (initializing) {
-    return null;
+    return <Slot />;
   }
 
   return (

@@ -50,8 +50,8 @@ CREATE TABLE public.bookings (
 -- Create chats table
 create table public.chats (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users on delete cascade not null,
-  other_user_id uuid references auth.users on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  other_user_id uuid references public.profiles(id) on delete cascade not null,
   ride_id uuid references rides(id) on delete cascade not null,
   last_message_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unread_count integer default 0,
@@ -63,8 +63,8 @@ create table public.chats (
 create table public.messages (
   id uuid default gen_random_uuid() primary key,
   chat_id text not null,
-  sender_id uuid references auth.users on delete cascade not null,
-  receiver_id uuid references auth.users on delete cascade not null,
+  sender_id uuid references public.profiles(id) on delete cascade not null,
+  receiver_id uuid references public.profiles(id) on delete cascade not null,
   type text not null,
   content text not null,
   metadata jsonb,

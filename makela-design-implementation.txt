@@ -1,243 +1,174 @@
-# Makela Design System Implementation Guide
+# Makela Design System
 
-## Theme Setup Instructions
+## Brand Colors
 
-### 1. Install Required Dependencies
-```bash
-# Install fonts
-yarn add @fontsource/poppins @fontsource/space-grotesk
+### Primary Palette
+- Primary: `#7209B7` (Rich Purple)
+  - A bold, regal purple that symbolizes innovation and luxury
+  - Used for primary actions, brand identity, and key UI elements
 
-# Install react-native-linear-gradient
-yarn add react-native-linear-gradient
+- Secondary: `#4CC9F0` (Electric Blue)
+  - A vibrant, energetic blue representing technology and movement
+  - Used for secondary actions and interactive elements
+
+### Accent Colors
+- Accent 1: `#F72585` (Vibrant Pink)
+  - Used for highlights, notifications, and important alerts
+- Accent 2: `#4361EE` (Royal Blue)
+  - Used for trust indicators and verification badges
+- Accent 3: `#3A0CA3` (Deep Purple)
+  - Used for premium features and special status indicators
+
+### Neutral Palette
+- Background: `#F8F9FC`
+- Surface: `#FFFFFF`
+- Dark Text: `#1A1A2F`
+- Medium Text: `#4B4B63`
+- Light Text: `#9898A6`
+- Dividers: `#E5E5E9`
+
+## Typography
+
+### Font Families
+- Primary: `"Aeonik"` (For headings and important UI elements)
+  - A geometric sans-serif with perfect balance of modern and friendly
+- Secondary: `"Cabinet Grotesk"` (For body text and UI elements)
+  - Clean, highly legible, with subtle personality
+- Monospace: `"JetBrains Mono"` (For numbers, codes, and technical information)
+  - Clear, distinctive numerals perfect for prices and times
+
+### Type Scale
+- Display: 48px / 56px line height
+- H1: 40px / 48px line height
+- H2: 32px / 40px line height
+- H3: 24px / 32px line height
+- H4: 20px / 28px line height
+- Body Large: 18px / 28px line height
+- Body: 16px / 24px line height
+- Body Small: 14px / 20px line height
+- Caption: 12px / 16px line height
+
+## Component Design
+
+### Buttons
+Primary Button:
+```css
+background: linear-gradient(135deg, #7209B7, #4361EE);
+border-radius: 12px;
+padding: 16px 32px;
+font-family: "Aeonik";
+font-weight: 600;
+letter-spacing: 0.2px;
+box-shadow: 0 4px 12px rgba(114, 9, 183, 0.2);
 ```
 
-### 2. Create Theme Directory Structure
-```
-src/
-└── theme/
-    ├── index.ts
-    ├── colors.ts
-    ├── typography.ts
-    ├── spacing.ts
-    ├── gradients.ts
-    └── components/
-        ├── buttons.ts
-        ├── cards.ts
-        └── inputs.ts
+Secondary Button:
+```css
+background: rgba(114, 9, 183, 0.1);
+border: 1.5px solid #7209B7;
+border-radius: 12px;
+padding: 16px 32px;
+color: #7209B7;
 ```
 
-### 3. Colors Configuration (colors.ts)
-```typescript
-export const colors = {
-  // Primary Colors
-  primary: {
-    deepPurple: '#3D1D72',
-    electricIndigo: '#6B4DE6',
-  },
-  
-  // Accent Colors
-  accent: {
-    mintGreen: '#22E6B8',
-    coral: '#FF6B6B',
-  },
-  
-  // Neutral Colors
-  neutral: {
-    spaceBlack: '#151420',
-    galacticGrey: '#2A2A3C',
-    stellarSilver: '#F5F5F8',
-  },
-  
-  // Text Colors
-  text: {
-    primary: '#151420',
-    secondary: '#2A2A3C',
-    disabled: '#6E6E89',
-    inverse: '#FFFFFF',
-  },
-  
-  // Status Colors
-  status: {
-    success: '#22E6B8',
-    error: '#FF6B6B',
-    warning: '#FFB168',
-    info: '#6B4DE6',
-  },
-  
-  // Background Colors
-  background: {
-    primary: '#FFFFFF',
-    secondary: '#F5F5F8',
-    dark: '#151420',
-  }
-};
+### Cards
+```css
+background: #FFFFFF;
+border-radius: 16px;
+box-shadow: 0 8px 24px rgba(26, 26, 47, 0.05);
+border: 1px solid rgba(229, 229, 233, 0.5);
+backdrop-filter: blur(12px);
 ```
 
-### 4. Typography Configuration (typography.ts)
-```typescript
-import { Platform } from 'react-native';
-
-const fontFamily = Platform.select({
-  ios: 'SF Pro Display',
-  android: 'Poppins',
-});
-
-const metricsFont = 'Space Grotesk';
-
-export const typography = {
-  fonts: {
-    primary: fontFamily,
-    metrics: metricsFont,
-  },
-  
-  weights: {
-    regular: '400',
-    medium: '500',
-    semiBold: '600',
-    bold: '700',
-  },
-  
-  sizes: {
-    h1: 32,
-    h2: 24,
-    h3: 20,
-    body1: 16,
-    body2: 14,
-    caption: 12,
-    metrics: 18,
-  },
-  
-  letterSpacing: {
-    h1: -0.5,
-    h2: -0.3,
-    body: 0,
-  }
-};
+### Input Fields
+```css
+background: #F8F9FC;
+border: 1.5px solid #E5E5E9;
+border-radius: 12px;
+padding: 16px;
+transition: all 0.2s ease;
 ```
 
-### 5. Gradients Configuration (gradients.ts)
-```typescript
-import { colors } from './colors';
-
-export const gradients = {
-  primary: {
-    colors: [colors.primary.deepPurple, colors.primary.electricIndigo],
-    start: { x: 0, y: 0 },
-    end: { x: 1, y: 1 },
-  },
-  accent: {
-    colors: [colors.accent.mintGreen, colors.primary.electricIndigo],
-    start: { x: 0, y: 0 },
-    end: { x: 1, y: 1 },
-  },
-  premium: {
-    colors: [colors.primary.deepPurple, colors.accent.mintGreen],
-    start: { x: 0, y: 0 },
-    end: { x: 1, y: 1 },
-  },
-};
+Focus state:
+```css
+border-color: #7209B7;
+box-shadow: 0 0 0 4px rgba(114, 9, 183, 0.1);
 ```
 
-### 6. Example Component Styles (buttons.ts)
-```typescript
-import { colors } from '../colors';
-import { typography } from '../typography';
+## Iconography
 
-export const buttonStyles = {
-  base: {
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  
-  primary: {
-    backgroundColor: colors.primary.deepPurple,
-  },
-  
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.primary.deepPurple,
-  },
-  
-  text: {
-    fontFamily: typography.fonts.primary,
-    fontSize: typography.sizes.body1,
-    fontWeight: typography.weights.semiBold,
-  },
-};
+Icons should be:
+- Filled style with subtle gradients
+- Rounded corners (2px radius)
+- 24x24px default size
+- 2px stroke width for outlined variants
+- Using the primary color palette for interactive states
+
+## Animation & Motion
+
+### Timing
+- Quick interactions: 200ms
+- Standard transitions: 300ms
+- Complex animations: 500ms
+- Page transitions: 400ms
+
+### Easing
+- Standard: cubic-bezier(0.4, 0, 0.2, 1)
+- Entry: cubic-bezier(0, 0, 0.2, 1)
+- Exit: cubic-bezier(0.4, 0, 1, 1)
+
+## Spacing System
+
+Base unit: 4px
+```
+4px  - Micro spacing
+8px  - Small elements
+16px - Standard spacing
+24px - Medium spacing
+32px - Large spacing
+48px - Extra large spacing
+64px - Section spacing
 ```
 
-### 7. Theme Usage Example
-```typescript
-// In your component:
-import { colors, typography, gradients } from '../theme';
-import LinearGradient from 'react-native-linear-gradient';
+## Special Effects
 
-const PrimaryButton = ({ title, onPress }) => (
-  <LinearGradient {...gradients.primary}>
-    <Pressable
-      style={[buttonStyles.base]}
-      onPress={onPress}
-    >
-      <Text style={[
-        buttonStyles.text,
-        { color: colors.text.inverse }
-      ]}>
-        {title}
-      </Text>
-    </Pressable>
-  </LinearGradient>
-);
+### Gradients
+Primary Gradient:
+```css
+background: linear-gradient(135deg, #7209B7 0%, #4361EE 100%);
 ```
 
-### 8. Dark Mode Configuration
-```typescript
-export const darkTheme = {
-  colors: {
-    ...colors,
-    background: {
-      primary: colors.neutral.spaceBlack,
-      secondary: colors.neutral.galacticGrey,
-    },
-    text: {
-      primary: colors.text.inverse,
-      secondary: '#B4B4C7',
-      disabled: '#6E6E89',
-    },
-  },
-};
+Accent Gradient:
+```css
+background: linear-gradient(135deg, #F72585 0%, #7209B7 100%);
 ```
 
-## Implementation Notes
+### Shadows
+```css
+/* Elevation 1 */
+box-shadow: 0 2px 4px rgba(26, 26, 47, 0.06);
 
-1. Font Loading
-- Ensure fonts are properly linked in iOS and Android
-- Include font fallbacks
-- Implement font loading in App.tsx
+/* Elevation 2 */
+box-shadow: 0 4px 8px rgba(26, 26, 47, 0.08);
 
-2. Accessibility
-- Maintain minimum contrast ratios
-- Support dynamic type scaling
-- Include proper hit areas for touch targets
+/* Elevation 3 */
+box-shadow: 0 8px 16px rgba(26, 26, 47, 0.12);
 
-3. Performance
-- Pre-compute styles where possible
-- Use memo for gradient components
-- Cache theme values
+/* Special Elements */
+box-shadow: 0 12px 24px rgba(114, 9, 183, 0.15);
+```
 
-4. Consistency
-- Always use theme values instead of hard-coded colors
-- Maintain consistent spacing using the theme
-- Follow the type scale for all text elements
+## Responsive Breakpoints
+```css
+/* Mobile */
+@media (min-width: 320px) { ... }
 
-## Quality Checks
+/* Tablet */
+@media (min-width: 768px) { ... }
 
-1. Run through all screens in both light and dark mode
-2. Test on multiple device sizes
-3. Verify accessibility scores
-4. Check performance metrics
-5. Validate gradient rendering on different devices
+/* Desktop */
+@media (min-width: 1024px) { ... }
 
+/* Large Desktop */
+@media (min-width: 1440px) { ... }
+```

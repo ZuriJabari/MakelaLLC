@@ -24,6 +24,22 @@ interface ChatPreview {
   ride_id: string;
 }
 
+interface SupabaseChatResponse {
+  id: string;
+  ride_id: string;
+  other_user: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+  last_message: Array<{
+    content: string;
+    type: 'text' | 'image' | 'location';
+    created_at: string;
+  }>;
+  unread_count: number;
+}
+
 export default function MessagesScreen() {
   const colorScheme = useColorScheme() as ColorScheme;
   const [chats, setChats] = useState<ChatPreview[]>([]);
@@ -40,7 +56,7 @@ export default function MessagesScreen() {
         .select(`
           id,
           ride_id,
-          other_user:profiles!other_user_id(
+          other_user:profiles!chats_other_user_id_fkey(
             id,
             full_name,
             avatar_url
@@ -53,7 +69,8 @@ export default function MessagesScreen() {
           unread_count
         `)
         .eq('user_id', user.id)
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false })
+        .returns<SupabaseChatResponse[]>();
 
       if (error) throw error;
       
@@ -62,14 +79,14 @@ export default function MessagesScreen() {
         id: chat.id,
         ride_id: chat.ride_id,
         other_user: {
-          id: chat.other_user[0]?.id || '',
-          full_name: chat.other_user[0]?.full_name || '',
-          avatar_url: chat.other_user[0]?.avatar_url || null,
+          id: chat.other_user.id,
+          full_name: chat.other_user.full_name || '',
+          avatar_url: chat.other_user.avatar_url || null,
         },
         last_message: {
-          content: chat.last_message[0]?.content || '',
-          type: chat.last_message[0]?.type || 'text',
-          created_at: chat.last_message[0]?.created_at || new Date().toISOString(),
+          content: chat.last_message?.[0]?.content || '',
+          type: chat.last_message?.[0]?.type || 'text',
+          created_at: chat.last_message?.[0]?.created_at || new Date().toISOString(),
         },
         unread_count: chat.unread_count || 0,
       }));

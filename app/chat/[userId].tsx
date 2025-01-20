@@ -79,10 +79,18 @@ export default function ChatScreen() {
     try {
       if (!currentUser) return;
 
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!profile) return;
+
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('chat_id', `${currentUser.id}_${userId}`)
+        .eq('chat_id', `${profile.id}_${userId}`)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -160,40 +168,52 @@ export default function ChatScreen() {
   const subscribeToMessages = () => {
     if (!currentUser) return;
 
-    const channel = supabase
-      .channel('chat_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${currentUser.id}_${userId}`,
-        },
-        async (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
-          
-          // Mark message as delivered
-          if (newMessage.sender_id === userId) {
-            await supabase
-              .from('messages')
-              .update({ status: 'delivered' })
-              .eq('id', newMessage.id);
-          }
+    // Get profile ID first
+    supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', currentUser.id)
+      .single()
+      .then(({ data: profile }) => {
+        if (!profile) return;
 
-          // Scroll to bottom
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }
-      )
-      .subscribe();
+        const channel = supabase
+          .channel('chat_messages')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              filter: `chat_id=eq.${profile.id}_${userId}`,
+            },
+            async (payload: { new: Message }) => {
+              const newMessage = payload.new;
+              setMessages(prev => [...prev, newMessage]);
+              
+              // Mark message as delivered
+              if (newMessage.sender_id === userId) {
+                await supabase
+                  .from('messages')
+                  .update({ status: 'delivered' })
+                  .eq('id', newMessage.id);
+              }
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+              // Scroll to bottom
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      });
   };
 
   const subscribeToTyping = () => {
+    if (!currentUser) return;
+
     const channel = supabase
       .channel(`typing_${userId}`)
       .on('broadcast', { event: 'typing' }, () => {
@@ -212,11 +232,19 @@ export default function ChatScreen() {
     try {
       if (!currentUser) return;
 
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!profile) return;
+
       const { error } = await supabase
         .from('messages')
         .insert({
-          chat_id: `${currentUser.id}_${userId}`,
-          sender_id: currentUser.id,
+          chat_id: `${profile.id}_${userId}`,
+          sender_id: profile.id,
           receiver_id: userId,
           type: message.type,
           content: message.content,
