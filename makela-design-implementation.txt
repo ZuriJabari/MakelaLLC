@@ -1,0 +1,243 @@
+# Makela Design System Implementation Guide
+
+## Theme Setup Instructions
+
+### 1. Install Required Dependencies
+```bash
+# Install fonts
+yarn add @fontsource/poppins @fontsource/space-grotesk
+
+# Install react-native-linear-gradient
+yarn add react-native-linear-gradient
+```
+
+### 2. Create Theme Directory Structure
+```
+src/
+└── theme/
+    ├── index.ts
+    ├── colors.ts
+    ├── typography.ts
+    ├── spacing.ts
+    ├── gradients.ts
+    └── components/
+        ├── buttons.ts
+        ├── cards.ts
+        └── inputs.ts
+```
+
+### 3. Colors Configuration (colors.ts)
+```typescript
+export const colors = {
+  // Primary Colors
+  primary: {
+    deepPurple: '#3D1D72',
+    electricIndigo: '#6B4DE6',
+  },
+  
+  // Accent Colors
+  accent: {
+    mintGreen: '#22E6B8',
+    coral: '#FF6B6B',
+  },
+  
+  // Neutral Colors
+  neutral: {
+    spaceBlack: '#151420',
+    galacticGrey: '#2A2A3C',
+    stellarSilver: '#F5F5F8',
+  },
+  
+  // Text Colors
+  text: {
+    primary: '#151420',
+    secondary: '#2A2A3C',
+    disabled: '#6E6E89',
+    inverse: '#FFFFFF',
+  },
+  
+  // Status Colors
+  status: {
+    success: '#22E6B8',
+    error: '#FF6B6B',
+    warning: '#FFB168',
+    info: '#6B4DE6',
+  },
+  
+  // Background Colors
+  background: {
+    primary: '#FFFFFF',
+    secondary: '#F5F5F8',
+    dark: '#151420',
+  }
+};
+```
+
+### 4. Typography Configuration (typography.ts)
+```typescript
+import { Platform } from 'react-native';
+
+const fontFamily = Platform.select({
+  ios: 'SF Pro Display',
+  android: 'Poppins',
+});
+
+const metricsFont = 'Space Grotesk';
+
+export const typography = {
+  fonts: {
+    primary: fontFamily,
+    metrics: metricsFont,
+  },
+  
+  weights: {
+    regular: '400',
+    medium: '500',
+    semiBold: '600',
+    bold: '700',
+  },
+  
+  sizes: {
+    h1: 32,
+    h2: 24,
+    h3: 20,
+    body1: 16,
+    body2: 14,
+    caption: 12,
+    metrics: 18,
+  },
+  
+  letterSpacing: {
+    h1: -0.5,
+    h2: -0.3,
+    body: 0,
+  }
+};
+```
+
+### 5. Gradients Configuration (gradients.ts)
+```typescript
+import { colors } from './colors';
+
+export const gradients = {
+  primary: {
+    colors: [colors.primary.deepPurple, colors.primary.electricIndigo],
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 1 },
+  },
+  accent: {
+    colors: [colors.accent.mintGreen, colors.primary.electricIndigo],
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 1 },
+  },
+  premium: {
+    colors: [colors.primary.deepPurple, colors.accent.mintGreen],
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 1 },
+  },
+};
+```
+
+### 6. Example Component Styles (buttons.ts)
+```typescript
+import { colors } from '../colors';
+import { typography } from '../typography';
+
+export const buttonStyles = {
+  base: {
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  
+  primary: {
+    backgroundColor: colors.primary.deepPurple,
+  },
+  
+  secondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary.deepPurple,
+  },
+  
+  text: {
+    fontFamily: typography.fonts.primary,
+    fontSize: typography.sizes.body1,
+    fontWeight: typography.weights.semiBold,
+  },
+};
+```
+
+### 7. Theme Usage Example
+```typescript
+// In your component:
+import { colors, typography, gradients } from '../theme';
+import LinearGradient from 'react-native-linear-gradient';
+
+const PrimaryButton = ({ title, onPress }) => (
+  <LinearGradient {...gradients.primary}>
+    <Pressable
+      style={[buttonStyles.base]}
+      onPress={onPress}
+    >
+      <Text style={[
+        buttonStyles.text,
+        { color: colors.text.inverse }
+      ]}>
+        {title}
+      </Text>
+    </Pressable>
+  </LinearGradient>
+);
+```
+
+### 8. Dark Mode Configuration
+```typescript
+export const darkTheme = {
+  colors: {
+    ...colors,
+    background: {
+      primary: colors.neutral.spaceBlack,
+      secondary: colors.neutral.galacticGrey,
+    },
+    text: {
+      primary: colors.text.inverse,
+      secondary: '#B4B4C7',
+      disabled: '#6E6E89',
+    },
+  },
+};
+```
+
+## Implementation Notes
+
+1. Font Loading
+- Ensure fonts are properly linked in iOS and Android
+- Include font fallbacks
+- Implement font loading in App.tsx
+
+2. Accessibility
+- Maintain minimum contrast ratios
+- Support dynamic type scaling
+- Include proper hit areas for touch targets
+
+3. Performance
+- Pre-compute styles where possible
+- Use memo for gradient components
+- Cache theme values
+
+4. Consistency
+- Always use theme values instead of hard-coded colors
+- Maintain consistent spacing using the theme
+- Follow the type scale for all text elements
+
+## Quality Checks
+
+1. Run through all screens in both light and dark mode
+2. Test on multiple device sizes
+3. Verify accessibility scores
+4. Check performance metrics
+5. Validate gradient rendering on different devices
+

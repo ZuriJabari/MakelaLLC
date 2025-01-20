@@ -1,0 +1,354 @@
+# Makela Project Development Context
+
+## Project Overview
+Makela is a carpooling platform specifically designed for the Ugandan market. The app connects drivers with empty seats to passengers heading in the same direction, facilitating cost-sharing and efficient transportation across Uganda.
+
+## Target Market
+- **Primary**: Urban and semi-urban Ugandan populations
+- **Geography**: Major cities and towns in Uganda
+- **User Types**: Drivers (ride providers), Passengers (ride seekers)
+- **Currency**: Ugandan Shilling (UGX)
+- **Payment Methods**: Mobile Money (MTN, Airtel)
+
+## Technical Stack
+
+### Frontend (Mobile Apps)
+```typescript
+// Technology Choices
+- React Native CLI (not Expo)
+- TypeScript
+- Redux Toolkit (state management)
+- React Navigation 6
+- Firebase SDK
+- React Native Maps
+- Async Storage
+
+// Project Structure
+src/
+├── api/
+├── assets/
+├── components/
+├── config/
+├── features/
+├── hooks/
+├── navigation/
+├── screens/
+├── services/
+├── store/
+├── theme/
+└── utils/
+```
+
+### Backend (API & Services)
+```python
+# Technology Choices
+- Django 4.2+
+- Django REST Framework
+- PostgreSQL
+- Firebase Admin SDK
+- Celery (async tasks)
+- Redis (caching)
+
+# Project Structure
+backend/
+├── config/
+├── apps/
+│   ├── accounts/
+│   ├── rides/
+│   ├── payments/
+│   └── notifications/
+├── utils/
+└── services/
+```
+
+## Core Features & Implementation Priority
+
+### 1. Authentication & Profile (Priority: Highest)
+```typescript
+// Features
+- Phone number authentication
+- OTP verification
+- User profile creation
+- ID verification (for drivers)
+- Vehicle registration (for drivers)
+
+// Key Considerations
+- Firebase Phone Auth integration
+- Secure document storage
+- Profile completion tracking
+```
+
+### 2. Wallet & Payments (Priority: Highest)
+```typescript
+// Features
+- Wallet creation (passenger, driver, platform)
+- Mobile money integration
+- Top-up functionality
+- Withdrawal processing
+- Transaction history
+- Commission handling
+
+// Key Considerations
+- Real-time balance updates
+- Secure payment processing
+- Transaction rollback mechanisms
+- Commission calculations
+```
+
+### 3. Ride Management (Priority: Highest)
+```typescript
+// Features
+- Ride listing creation
+- Ride search & filtering
+- Booking management
+- Real-time tracking
+- Rating & review system
+
+// Key Considerations
+- Geolocation services
+- Real-time updates
+- Booking validation
+- Seat availability tracking
+```
+
+## Database Schema
+
+### Users
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    phone_number VARCHAR(15) UNIQUE,
+    full_name VARCHAR(255),
+    email VARCHAR(255),
+    user_type VARCHAR(10),
+    rating DECIMAL(3,2),
+    verified BOOLEAN,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+### Rides
+```sql
+CREATE TABLE rides (
+    id UUID PRIMARY KEY,
+    driver_id UUID REFERENCES users(id),
+    origin_lat DECIMAL(10,8),
+    origin_lng DECIMAL(11,8),
+    destination_lat DECIMAL(10,8),
+    destination_lng DECIMAL(11,8),
+    departure_time TIMESTAMP,
+    price_per_seat DECIMAL(10,2),
+    available_seats INT,
+    status VARCHAR(20),
+    created_at TIMESTAMP
+);
+```
+
+### Bookings
+```sql
+CREATE TABLE bookings (
+    id UUID PRIMARY KEY,
+    ride_id UUID REFERENCES rides(id),
+    passenger_id UUID REFERENCES users(id),
+    seats_booked INT,
+    total_amount DECIMAL(10,2),
+    status VARCHAR(20),
+    created_at TIMESTAMP
+);
+```
+
+## API Endpoints
+
+### Authentication
+```typescript
+// Base URL: /api/v1/auth/
+POST /verify-phone/     // Request OTP
+POST /verify-otp/       // Verify OTP
+POST /register/         // Complete registration
+GET  /profile/          // Get user profile
+PUT  /profile/          // Update profile
+```
+
+### Rides
+```typescript
+// Base URL: /api/v1/rides/
+POST /                  // Create ride listing
+GET  /search/          // Search rides
+GET  /{id}/            // Get ride details
+POST /{id}/book/       // Book a ride
+PUT  /{id}/status/     // Update ride status
+```
+
+### Payments
+```typescript
+// Base URL: /api/v1/payments/
+POST /topup/           // Add money to wallet
+POST /withdraw/        // Withdraw from wallet
+GET  /balance/         // Get wallet balance
+GET  /transactions/    // Get transaction history
+```
+
+## Security Considerations
+
+### Authentication
+```typescript
+// Implementation Requirements
+- JWT token validation
+- Phone number verification
+- Session management
+- Rate limiting
+- Request validation
+```
+
+### Data Protection
+```typescript
+// Implementation Requirements
+- Data encryption at rest
+- Secure file storage
+- Payment data protection
+- Personal data handling
+```
+
+## Testing Requirements
+
+### Frontend Testing
+```typescript
+// Test Categories
+- Component testing
+- Integration testing
+- E2E testing
+- Performance testing
+```
+
+### Backend Testing
+```python
+# Test Categories
+- Unit testing
+- API testing
+- Integration testing
+- Load testing
+```
+
+## Development Workflow
+
+### Version Control
+```bash
+# Branch Structure
+main           # Production branch
+staging        # Pre-production testing
+develop        # Development branch
+feature/*      # Feature branches
+hotfix/*       # Hotfix branches
+```
+
+### Code Quality
+```typescript
+// Requirements
+- ESLint configuration
+- Prettier setup
+- TypeScript strict mode
+- Python type hints
+- Test coverage > 80%
+```
+
+### Deployment
+```typescript
+// Environments
+- Development
+- Staging
+- Production
+
+// CI/CD Pipeline
+- Automated testing
+- Code quality checks
+- Automated deployments
+```
+
+## Mobile Money Integration
+
+### MTN Mobile Money
+```typescript
+// Integration Points
+- Balance check
+- Money transfer
+- Transaction status
+- Webhook handling
+```
+
+### Airtel Money
+```typescript
+// Integration Points
+- Balance check
+- Money transfer
+- Transaction status
+- Webhook handling
+```
+
+## Monitoring & Analytics
+
+### Performance Monitoring
+```typescript
+// Metrics to Track
+- API response times
+- App launch time
+- Screen load times
+- Error rates
+```
+
+### Business Analytics
+```typescript
+// KPIs to Track
+- User acquisition
+- Ride bookings
+- Transaction volume
+- User retention
+```
+
+## Error Handling
+
+### Frontend Errors
+```typescript
+// Error Categories
+- Network errors
+- Validation errors
+- Authentication errors
+- Payment errors
+```
+
+### Backend Errors
+```python
+# Error Categories
+- API errors
+- Database errors
+- Third-party service errors
+- System errors
+```
+
+## Additional Considerations
+
+### Localization
+```typescript
+// Requirements
+- English (default)
+- Support for local languages
+- Currency formatting
+- Date/time formatting
+```
+
+### Offline Support
+```typescript
+// Features
+- Offline data storage
+- Sync mechanism
+- Conflict resolution
+```
+
+### Performance
+```typescript
+// Optimization Areas
+- Image optimization
+- API response caching
+- Lazy loading
+- Memory management
+```
